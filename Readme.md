@@ -66,6 +66,11 @@ It could in theory also generate the code differently.
 
 ## CLI
 
+Download 13kb bootstrap script
+[`db-codegen`](https://github.com/olafurpg/scala-db-codegen/blob/master/db-codegen)
+and execute it.
+The script will download all dependencies on first execution.
+
 ```shell
 $ db-codegen --help
 db-codegen 0.1.0
