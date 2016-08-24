@@ -9,7 +9,7 @@ object TypeMap {
     ArgParser.instance[TypeMap] { s =>
       try {
         val pairs = s.split(";").map { pair =>
-          val from :: to :: Nil = pair.split(",", 1).toList
+          val from :: to :: Nil = pair.split(",", 2).toList
           from -> to
         }
         Right(TypeMap(pairs: _*))

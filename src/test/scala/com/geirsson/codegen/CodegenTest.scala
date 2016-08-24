@@ -5,6 +5,7 @@ import java.io.PrintStream
 import java.nio.charset.StandardCharsets
 import java.sql.DriverManager
 
+import caseapp.CaseApp
 import org.scalatest.FunSuite
 
 class CodegenTest extends FunSuite {
@@ -14,14 +15,24 @@ class CodegenTest extends FunSuite {
     code.parse[Source].get.structure
   }
 
+  test("--type-map") {
+    val obtained =
+      CaseApp.parse[CodegenOptions](
+        Seq("--type-map", "numeric,BigDecimal;int8,Long"))
+    val expected = Right(
+      (CodegenOptions(
+         typeMap = TypeMap("numeric" -> "BigDecimal", "int8" -> "Long")),
+       Seq.empty[String]))
+    assert(obtained === expected)
+  }
+
   test("testMain") {
     val options = CodegenOptions(
       `package` = "my.custom"
     )
     Class.forName(options.jdbcDriver)
     val conn =
-      DriverManager
-        .getConnection(options.url, options.username, options.password)
+      DriverManager.getConnection(options.url, options.user, options.password)
     val stmt = conn.createStatement()
     val sql =
       """

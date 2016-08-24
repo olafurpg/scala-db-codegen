@@ -8,13 +8,47 @@ import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.ResultSet
 
+import caseapp.AppOf
+import caseapp._
 import io.getquill.NamingStrategy
 import org.scalafmt.FormatResult
 import org.scalafmt.Scalafmt
 import org.scalafmt.ScalafmtStyle
 
-case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
+case class Error(msg: String) extends Exception(msg)
 
+@AppName("db-codegen")
+@AppVersion("0.1.0")
+@ProgName("db-codegen")
+case class CodegenOptions(
+    @HelpMessage("user on database server") user: String = "postgres",
+    @HelpMessage("password for user on database server") password: String =
+      "postgres",
+    @HelpMessage("jdbc url") url: String = "jdbc:postgresql:postgres",
+    @HelpMessage("schema on database") schema: String = "public",
+    @HelpMessage("only tested with postgresql") jdbcDriver: String =
+      "org.postgresql.Driver",
+    @HelpMessage(
+      "top level imports of generated file"
+    ) imports: String = """|import java.util.Date
+                           |import io.getquill.WrappedValue""".stripMargin,
+    @HelpMessage(
+      "package name for generated classes"
+    ) `package`: String = "tables",
+    @HelpMessage(
+      "Which types should write to which types? Format is: numeric,BigDecimal;int8,Long;..."
+    ) typeMap: TypeMap = TypeMap.default,
+    @HelpMessage(
+      "Do not generate classes for these tables."
+    ) excludedTables: List[String] = List("schema_version"),
+    @HelpMessage(
+      "Write generated code to this filename. Prints to stdout if not set."
+    ) file: Option[String] = None
+) extends App {
+  Codegen.cliRun(this)
+}
+
+case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
   import Codegen._
   val excludedTables = options.excludedTables.toSet
   val columnType2scalaType = options.typeMap.pairs.toMap
@@ -112,7 +146,9 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
                     nullable: Boolean,
                     isPrimaryKey: Boolean,
                     references: Option[SimpleColumn]) {
-    val scalaType = columnType2scalaType(`type`)
+    val scalaType = columnType2scalaType.getOrElse(`type`, {
+      throw Error(s"ERROR: missing --type-map for type '${`type`}'")
+    })
 
     def toArg(namingStrategy: NamingStrategy, tableName: String): String = {
       s"${namingStrategy.column(columnName)}: ${this.toSimple.toType}"
@@ -154,10 +190,9 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
           |}""".stripMargin
     }
   }
-
 }
 
-object Codegen {
+object Codegen extends AppOf[CodegenOptions] {
   val TABLE_NAME = "TABLE_NAME"
   val COLUMN_NAME = "COLUMN_NAME"
   val TYPE_NAME = "TYPE_NAME"
@@ -174,23 +209,26 @@ object Codegen {
     }
   }
 
-  import caseapp._
-
-  def main(args: Array[String]): Unit = {
-    CaseApp.parse[CodegenOptions](args) match {
-      case Right((options, _)) => run(options)
-      case Left(msg) => System.err.println(msg)
+  def cliRun(codegenOptions: CodegenOptions,
+             outstream: PrintStream = System.out): Unit = {
+    try {
+      run(codegenOptions, outstream)
+    } catch {
+      case Error(msg) =>
+        System.err.println(msg)
+        System.exit(1)
     }
   }
 
   def run(codegenOptions: CodegenOptions,
           outstream: PrintStream = System.out): Unit = {
     println("Starting...")
+
     val startTime = System.currentTimeMillis()
     Class.forName(codegenOptions.jdbcDriver)
     val db: Connection =
       DriverManager.getConnection(codegenOptions.url,
-                                  codegenOptions.username,
+                                  codegenOptions.user,
                                   codegenOptions.password)
     val codegen = Codegen(codegenOptions, SnakeCaseReverse)
     val foreignKeys = codegen.getForeignKeys(db)
