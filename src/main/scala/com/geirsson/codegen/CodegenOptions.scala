@@ -1,4 +1,4 @@
-package com.geirsson.codegen.codegen
+package com.geirsson.codegen
 
 case class CodegenOptions(
     username: String = "postgres",
@@ -8,7 +8,8 @@ case class CodegenOptions(
     jdbcDriver: String = "org.postgresql.Driver",
     imports: String = """|import java.util.Date
                          |import io.getquill.WrappedValue""".stripMargin,
-    packageName: String = "is.launaskil.models",
+    `package`: String = "tables",
     typeMap: TypeMap = TypeMap.default,
-    file: Option[String]
+    excludedTables: List[String] = List("schema_version"),
+    file: Option[String] = None
 )

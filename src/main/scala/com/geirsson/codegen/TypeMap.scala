@@ -1,4 +1,4 @@
-package com.geirsson.codegen.codegen
+package com.geirsson.codegen
 
 import scala.util.control.NonFatal
 
@@ -32,6 +32,4 @@ object TypeMap {
   )
 }
 
-case class TypeMap(pairs: (String, String)*) {
-  val columnType2scalaType = pairs.toMap
-}
+case class TypeMap(pairs: (String, String)*)
