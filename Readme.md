@@ -1,5 +1,4 @@
-# scala-db-codegen
-
+# scala-db-codegen [![Build Status](https://travis-ci.org/olafurpg/db-codegen.svg?branch=master)](https://travis-ci.org/olafurpg/db-codegen)
 Generate Scala code from your database to use with the incredble library [quill](https://github.com/getquill/quill).
 Only tested with postgresql, but could in theory work with any jdbc compliant database.
 
@@ -26,9 +25,10 @@ ALTER TABLE articles
   REFERENCES test_users_main (id);
 ```
 
-scala-db-codegen will then generate "type all the things!" code like this
+scala-db-codegen will then generate ["type all the things!"](http://jto.github.io/articles/type-all-the-things/)
+code like this
 
-```
+```scala
 package tables
 import java.util.Date
 import io.getquill.WrappedValue
@@ -59,6 +59,8 @@ object Tables {
   }
 }
 ```
+
+![Type all the things!](https://cdn.meme.am/instances/500x/71298545.jpg)
 
 It could in theory also generate the code differently.
 
