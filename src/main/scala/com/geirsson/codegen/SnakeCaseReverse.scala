@@ -1,4 +1,4 @@
-package com.geirsson.codegen.codegen
+package com.geirsson.codegen
 
 import io.getquill.NamingStrategy
 

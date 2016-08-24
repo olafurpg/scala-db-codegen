@@ -1,14 +1,13 @@
 package com.geirsson.codegen
 
 import java.io.File
+import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.ResultSet
 
-import com.geirsson.codegen.codegen.CodegenOptions
-import com.geirsson.codegen.codegen.SnakeCaseReverse
 import io.getquill.NamingStrategy
 import org.scalafmt.FormatResult
 import org.scalafmt.Scalafmt
@@ -17,20 +16,22 @@ import org.scalafmt.ScalafmtStyle
 case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
 
   import Codegen._
-  import options.typeMap.columnType2scalaType
+  val excludedTables = options.excludedTables.toSet
+  val columnType2scalaType = options.typeMap.pairs.toMap
 
   def getForeignKeys(db: Connection): Set[ForeignKey] = {
     val sb = Set.newBuilder[ForeignKey]
-    val foreignKeys = db.getMetaData.getExportedKeys(null, "public", null)
+    val foreignKeys =
+      db.getMetaData.getExportedKeys(null, options.schema, null)
     while (foreignKeys.next()) {
       sb += ForeignKey(
         from = SimpleColumn(
-          tableName = foreignKeys.getString("fktable_name"),
-          columnName = foreignKeys.getString("fkcolumn_name")
+          tableName = foreignKeys.getString(FK_TABLE_NAME),
+          columnName = foreignKeys.getString(FK_COLUMN_NAME)
         ),
         to = SimpleColumn(
-          tableName = foreignKeys.getString("pktable_name"),
-          columnName = foreignKeys.getString("pkcolumn_name")
+          tableName = foreignKeys.getString(PK_TABLE_NAME),
+          columnName = foreignKeys.getString(PK_COLUMN_NAME)
         )
       )
     }
@@ -40,10 +41,10 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
   def getTables(db: Connection, foreignKeys: Set[ForeignKey]): Seq[Table] = {
     val sb = Seq.newBuilder[Table]
     val rs: ResultSet =
-      db.getMetaData.getTables(null, "public", "%", Array("TABLE"))
+      db.getMetaData.getTables(null, options.schema, "%", Array("TABLE"))
     while (rs.next()) {
-      if (!excludedTables.contains(rs.getString(tableName))) {
-        val name = rs.getString(tableName)
+      if (!excludedTables.contains(rs.getString(TABLE_NAME))) {
+        val name = rs.getString(TABLE_NAME)
         sb += Table(
           name,
           getColumns(db, name, foreignKeys)
@@ -61,15 +62,15 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
     val cols =
       db.getMetaData.getColumns(null, null, tableName, null)
     while (cols.next()) {
-      val colName = cols.getString(columnName)
+      val colName = cols.getString(COLUMN_NAME)
       val simpleColumn = SimpleColumn(tableName, colName)
       val ref = foreignKeys.find(_.from == simpleColumn).map(_.to)
       sb += Column(
         tableName,
         colName,
-        cols.getString(typeName),
-        cols.getBoolean(nullable),
-        primaryKeys contains cols.getString(columnName),
+        cols.getString(TYPE_NAME),
+        cols.getBoolean(NULLABLE),
+        primaryKeys contains cols.getString(COLUMN_NAME),
         ref
       )
     }
@@ -80,7 +81,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
     val sb = Set.newBuilder[String]
     val primaryKeys = db.getMetaData.getPrimaryKeys(null, null, tableName)
     while (primaryKeys.next()) {
-      sb += primaryKeys.getString(columnName)
+      sb += primaryKeys.getString(COLUMN_NAME)
     }
     sb.result()
   }
@@ -89,7 +90,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
                   namingStrategy: NamingStrategy,
                   options: CodegenOptions) = {
     val body = tables.map(_.toCode).mkString("\n\n")
-    s"""|package ${options.packageName}
+    s"""|package ${options.`package`}
         |${options.imports}
         |
         |object Tables {
@@ -157,12 +158,15 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
 }
 
 object Codegen {
-  val tableName = "TABLE_NAME"
-  val columnName = "COLUMN_NAME"
-  val typeName = "TYPE_NAME"
-  val nullable = "NULLABLE"
-  val primaryKeyName = "pk_name"
-  val excludedTables = Set("schema_version")
+  val TABLE_NAME = "TABLE_NAME"
+  val COLUMN_NAME = "COLUMN_NAME"
+  val TYPE_NAME = "TYPE_NAME"
+  val NULLABLE = "NULLABLE"
+  val PK_NAME = "pk_name"
+  val FK_TABLE_NAME = "fktable_name"
+  val FK_COLUMN_NAME = "fkcolumn_name"
+  val PK_TABLE_NAME = "pktable_name"
+  val PK_COLUMN_NAME = "pkcolumn_name"
 
   def debugPrintColumnLabels(rs: ResultSet): Unit = {
     (1 to rs.getMetaData.getColumnCount).foreach { i =>
@@ -179,7 +183,8 @@ object Codegen {
     }
   }
 
-  def run(codegenOptions: CodegenOptions) = {
+  def run(codegenOptions: CodegenOptions,
+          outstream: PrintStream = System.out): Unit = {
     println("Starting...")
     val startTime = System.currentTimeMillis()
     Class.forName(codegenOptions.jdbcDriver)
@@ -203,7 +208,7 @@ object Codegen {
         println(
           s"Done! Wrote to $uri (${System.currentTimeMillis() - startTime}ms)")
       case _ =>
-        println(code)
+        outstream.println(code)
     }
     db.close()
   }
