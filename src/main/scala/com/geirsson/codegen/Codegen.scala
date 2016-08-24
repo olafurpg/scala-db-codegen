@@ -10,6 +10,7 @@ import java.sql.ResultSet
 
 import caseapp.AppOf
 import caseapp._
+import com.typesafe.scalalogging.Logger
 import io.getquill.NamingStrategy
 import org.scalafmt.FormatResult
 import org.scalafmt.Scalafmt
@@ -94,7 +95,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
     val primaryKeys = getPrimaryKeys(db, tableName)
     val sb = Seq.newBuilder[Column]
     val cols =
-      db.getMetaData.getColumns(null, null, tableName, null)
+      db.getMetaData.getColumns(null, options.schema, tableName, null)
     while (cols.next()) {
       val colName = cols.getString(COLUMN_NAME)
       val simpleColumn = SimpleColumn(tableName, colName)
@@ -135,6 +136,8 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
 
   case class ForeignKey(from: SimpleColumn, to: SimpleColumn)
 
+  val logger = Logger(this.getClass)
+
   case class SimpleColumn(tableName: String, columnName: String) {
     def toType =
       s"${namingStrategy.table(tableName)}.${namingStrategy.table(columnName)}"
@@ -146,12 +149,24 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
                     nullable: Boolean,
                     isPrimaryKey: Boolean,
                     references: Option[SimpleColumn]) {
-    val scalaType = columnType2scalaType.getOrElse(`type`, {
-      throw Error(s"ERROR: missing --type-map for type '${`type`}'")
-    })
+    if (!columnType2scalaType.contains(`type`)) {
+      logger.warn(s"unknown type '${`type`}")
+    }
+    def scalaType =
+      columnType2scalaType.getOrElse(`type`, {
+        throw Error(s"ERROR: missing --type-map for type '${`type`}'")
+      })
+    def scalaOptionType = makeOption(scalaType)
+
+    def makeOption(typ: String): String = {
+      if (nullable) s"Option[$typ]"
+      else typ
+    }
+
+    def toType: String = this.toSimple.toType
 
     def toArg(namingStrategy: NamingStrategy, tableName: String): String = {
-      s"${namingStrategy.column(columnName)}: ${this.toSimple.toType}"
+      s"${namingStrategy.column(columnName)}: ${makeOption(this.toType)}"
     }
 
     def toSimple = references.getOrElse(SimpleColumn(tableName, columnName))
@@ -166,13 +181,18 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
       val scalaName = namingStrategy.table(name)
       val args = columns.map(_.toArg(namingStrategy, scalaName)).mkString(", ")
       val applyArgs = columns.map { column =>
-        s"${namingStrategy.column(column.columnName)}: ${column.scalaType}"
+        s"${namingStrategy.column(column.columnName)}: ${column.scalaOptionType}"
       }.mkString(", ")
       val applyArgNames = columns.map { column =>
-        if (column.references.nonEmpty) {
-          s"${column.toSimple.toType}(${namingStrategy.column(column.columnName)})"
+        val typName = if (column.references.nonEmpty) {
+          column.toType
         } else {
-          s"${namingStrategy.table(column.columnName)}(${namingStrategy.column(column.columnName)})"
+          namingStrategy.table(column.columnName)
+        }
+        if (column.nullable) {
+          s"${namingStrategy.column(column.columnName)}.map($typName.apply)"
+        } else {
+          s"$typName(${namingStrategy.column(column.columnName)})"
         }
       }.mkString(", ")
       val classes =
@@ -222,7 +242,9 @@ object Codegen extends AppOf[CodegenOptions] {
 
   def run(codegenOptions: CodegenOptions,
           outstream: PrintStream = System.out): Unit = {
-    println("Starting...")
+    codegenOptions.file.foreach { x =>
+      outstream.println("Starting...")
+    }
 
     val startTime = System.currentTimeMillis()
     Class.forName(codegenOptions.jdbcDriver)
