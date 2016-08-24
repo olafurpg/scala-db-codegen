@@ -1,7 +1,66 @@
 # scala-db-codegen
 
-Generate Scala code from your database.
+Generate Scala code from your database to use with the incredble library [quill](https://github.com/getquill/quill).
 Only tested with postgresql, but could in theory work with any jdbc compliant database.
+
+## What does it do?
+
+Say you have some database with this schema
+
+```sql
+create table test_users_main(
+  id integer not null,
+  name varchar(255),
+  primary key (id)
+);
+
+create table articles(
+  id integer not null,
+  author_id integer not null,
+  is_published boolean
+);
+
+ALTER TABLE articles
+  ADD CONSTRAINT author_id_fk
+  FOREIGN KEY (author_id)
+  REFERENCES test_users_main (id);
+```
+
+scala-db-codegen will then generate "type all the things!" code like this
+
+```
+package tables
+import java.util.Date
+import io.getquill.WrappedValue
+
+object Tables {
+  /////////////////////////////////////////////////////
+  // Articles
+  /////////////////////////////////////////////////////
+  case class Articles(id: Articles.Id, authorId: TestUsersMain.Id, isPublished: Articles.IsPublished)
+  object Articles {
+    def create(id: Int, authorId: Int, isPublished: Boolean): Articles = {
+      Articles(Id(id), TestUsersMain.Id(authorId), IsPublished(isPublished))
+    }
+    case class Id(value: Int)              extends AnyVal with WrappedValue[Int]
+    case class IsPublished(value: Boolean) extends AnyVal with WrappedValue[Boolean]
+  }
+
+  /////////////////////////////////////////////////////
+  // TestUsersMain
+  /////////////////////////////////////////////////////
+  case class TestUsersMain(id: TestUsersMain.Id, name: TestUsersMain.Name)
+  object TestUsersMain {
+    def create(id: Int, name: String): TestUsersMain = {
+      TestUsersMain(Id(id), Name(name))
+    }
+    case class Id(value: Int)      extends AnyVal with WrappedValue[Int]
+    case class Name(value: String) extends AnyVal with WrappedValue[String]
+  }
+}
+```
+
+It could in theory also generate the code differently.
 
 ## CLI
 
@@ -37,6 +96,11 @@ Usage: db-codegen [options]
 
 ## Standalone library
 
-TODO, look at source for now.
+```scala
+// 2.11 only
+libraryDependencies += "com.geirsson" %% "codegen" % "0.1.0"
+```
+
+Consult the source usage, at least for now ;)
 
 

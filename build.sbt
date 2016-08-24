@@ -39,6 +39,7 @@ lazy val `launaskil-codegen` =
       name := "codegen",
       organization := "com.geirsson",
       scalaVersion := "2.11.8",
+      version := "0.1.0",
       packMain := Map("db-codegen" -> "com.geirsson.codegen.Codegen"),
       libraryDependencies ++= Seq(
         "com.geirsson" %% "scalafmt-core" % "0.3.0",
