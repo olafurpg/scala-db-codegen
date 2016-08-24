@@ -158,3 +158,7 @@ to do exactly what I wanted.
 Instead of learning more about slick models and which methods to override
 on the slick code generator, I decided to roll my own code generator and
 hopefully learn more about jdbc along the way :)
+
+## TODOs
+
+- [ ] Nullable columns
