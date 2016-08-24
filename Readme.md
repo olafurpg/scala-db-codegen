@@ -72,6 +72,42 @@ and execute it.
 The script will download all dependencies on first execution.
 
 ```shell
+$ db-codegen # Works with running postgres instance on localhost:5432 with user "postgres" and password "postgres"
+package tables
+import java.util.Date
+import io.getquill.WrappedValue
+
+object Tables {
+  /////////////////////////////////////////////////////
+  // Articles
+  /////////////////////////////////////////////////////
+  case class Articles(id: Articles.Id, authorId: TestUsersMain.Id, isPublished: Articles.IsPublished)
+  object Articles {
+    def create(id: Int, authorId: Int, isPublished: Boolean): Articles = {
+      Articles(Id(id), TestUsersMain.Id(authorId), IsPublished(isPublished))
+    }
+    case class Id(value: Int)              extends AnyVal with WrappedValue[Int]
+    case class IsPublished(value: Boolean) extends AnyVal with WrappedValue[Boolean]
+  }
+
+  /////////////////////////////////////////////////////
+  // TestUsersMain
+  /////////////////////////////////////////////////////
+  case class TestUsersMain(id: TestUsersMain.Id, name: TestUsersMain.Name)
+  object TestUsersMain {
+    def create(id: Int, name: String): TestUsersMain = {
+      TestUsersMain(Id(id), Name(name))
+    }
+    case class Id(value: Int)      extends AnyVal with WrappedValue[Int]
+    case class Name(value: String) extends AnyVal with WrappedValue[String]
+  }
+}
+$ db-codegen --user myuser --password mypassword --url jdbc:postgresql://localhost:8888/postgres --file Tables.scala --type-map "bool,Boolean;int4,Int;int8,Long"
+...
+```
+
+For more details:
+```shell
 $ db-codegen --help
 db-codegen 0.1.0
 Usage: db-codegen [options]
@@ -108,6 +144,17 @@ Usage: db-codegen [options]
 libraryDependencies += "com.geirsson" %% "codegen" % "0.1.0"
 ```
 
-Consult the source usage, at least for now ;)
+Consult the source code, at least for now ;)
 
 
+## Why not slick-codgen?
+
+The Slick code generator is excellent and please use that if you are using Slick.
+Really, the slick codegenerator is extremely customizable and can probably even
+do stuff that this library does.
+
+I created this library because I struggled to get the slick code generator
+to do exactly what I wanted.
+Instead of learning more about slick models and which methods to override
+on the slick code generator, I decided to roll my own code generator and
+hopefully learn more about jdbc along the way :)
