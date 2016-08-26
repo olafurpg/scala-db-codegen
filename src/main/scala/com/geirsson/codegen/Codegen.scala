@@ -54,62 +54,77 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
   val excludedTables = options.excludedTables.toSet
   val columnType2scalaType = options.typeMap.pairs.toMap
 
+  def results(resultSet: ResultSet): Iterator[ResultSet] = {
+    new Iterator[ResultSet] {
+      def hasNext = resultSet.next()
+      def next() = resultSet
+    }
+  }
+
   def getForeignKeys(db: Connection): Set[ForeignKey] = {
-    val sb = Set.newBuilder[ForeignKey]
     val foreignKeys =
       db.getMetaData.getExportedKeys(null, options.schema, null)
-    while (foreignKeys.next()) {
-      sb += ForeignKey(
+    results(foreignKeys).map { row =>
+      ForeignKey(
         from = SimpleColumn(
-          tableName = foreignKeys.getString(FK_TABLE_NAME),
-          columnName = foreignKeys.getString(FK_COLUMN_NAME)
+          tableName = row.getString(FK_TABLE_NAME),
+          columnName = row.getString(FK_COLUMN_NAME)
         ),
         to = SimpleColumn(
-          tableName = foreignKeys.getString(PK_TABLE_NAME),
-          columnName = foreignKeys.getString(PK_COLUMN_NAME)
+          tableName = row.getString(PK_TABLE_NAME),
+          columnName = row.getString(PK_COLUMN_NAME)
         )
       )
-    }
-    sb.result()
+    }.toSet
+  }
+
+  def warn(msg: String): Unit = {
+    System.err.println(s"[${Console.YELLOW}warn${Console.RESET}] $msg")
   }
 
   def getTables(db: Connection, foreignKeys: Set[ForeignKey]): Seq[Table] = {
-    val sb = Seq.newBuilder[Table]
     val rs: ResultSet =
       db.getMetaData.getTables(null, options.schema, "%", Array("TABLE"))
-    while (rs.next()) {
-      if (!excludedTables.contains(rs.getString(TABLE_NAME))) {
-        val name = rs.getString(TABLE_NAME)
-        sb += Table(
+    results(rs).flatMap { row =>
+      val name = row.getString(TABLE_NAME)
+      if (!excludedTables.contains(name)) {
+        val columns = getColumns(db, name, foreignKeys)
+        val mappedColumns = columns.filter(_.isRight).map(_.right.get)
+        val unmappedColumns = columns.filter(_.isLeft).map(_.left.get)
+        if (!unmappedColumns.isEmpty)
+          warn(s"The following columns from table $name need a mapping: $unmappedColumns")
+        Some(Table(
           name,
-          getColumns(db, name, foreignKeys)
-        )
+          mappedColumns
+        ))
+      } else {
+        None
       }
-    }
-    sb.result()
+    }.toVector
   }
-
   def getColumns(db: Connection,
                  tableName: String,
-                 foreignKeys: Set[ForeignKey]): Seq[Column] = {
+                 foreignKeys: Set[ForeignKey]): Seq[Either[String, Column]] = {
     val primaryKeys = getPrimaryKeys(db, tableName)
-    val sb = Seq.newBuilder[Column]
     val cols =
       db.getMetaData.getColumns(null, options.schema, tableName, null)
-    while (cols.next()) {
+    results(cols).map { row =>
       val colName = cols.getString(COLUMN_NAME)
       val simpleColumn = SimpleColumn(tableName, colName)
       val ref = foreignKeys.find(_.from == simpleColumn).map(_.to)
-      sb += Column(
-        tableName,
-        colName,
-        cols.getString(TYPE_NAME),
-        cols.getBoolean(NULLABLE),
-        primaryKeys contains cols.getString(COLUMN_NAME),
-        ref
-      )
-    }
-    sb.result()
+
+      val typ = cols.getString(TYPE_NAME)
+      columnType2scalaType.get(typ).map { scalaType =>
+        Right(Column(
+          tableName,
+          colName,
+          scalaType,
+          cols.getBoolean(NULLABLE),
+          primaryKeys contains cols.getString(COLUMN_NAME),
+          ref
+        ))
+      }.getOrElse(Left(typ))
+    }.toVector
   }
 
   def getPrimaryKeys(db: Connection, tableName: String): Set[String] = {
@@ -145,17 +160,10 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
 
   case class Column(tableName: String,
                     columnName: String,
-                    `type`: String,
+                    scalaType: String,
                     nullable: Boolean,
                     isPrimaryKey: Boolean,
                     references: Option[SimpleColumn]) {
-    if (!columnType2scalaType.contains(`type`)) {
-      logger.warn(s"unknown type '${`type`}")
-    }
-    def scalaType =
-      columnType2scalaType.getOrElse(`type`, {
-        throw Error(s"ERROR: missing --type-map for type '${`type`}'")
-      })
     def scalaOptionType = makeOption(scalaType)
 
     def makeOption(typ: String): String = {
