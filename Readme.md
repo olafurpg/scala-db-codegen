@@ -26,7 +26,7 @@ ALTER TABLE article
   REFERENCES test_user (id);
 ```
 
-scala-db-codegen will then generate ["type all the things!"](http://jto.github.io/articles/type-all-the-things/)
+`scala-db-codegen` will then generate ["type all the things!"](http://jto.github.io/articles/type-all-the-things/)
 code like this
 
 ```scala
@@ -68,24 +68,24 @@ It could in theory also generate the code differently.
 ## CLI
 
 Download 13kb bootstrap script
-[`db-codegen`](https://github.com/olafurpg/scala-db-codegen/blob/master/db-codegen)
+[`scala-db-codegen`](https://github.com/olafurpg/scala-db-codegen/blob/master/scala-db-codegen)
 and execute it.
 The script will download all dependencies on first execution.
 
 ```scala
 // print to stdout, works with running postgres instance on
 // localhost:5432 with user "postgres", password "postgres" and database "postgres"
-$ db-codegen
+$ scala-db-codegen
 // Override any default settings with flags.
-$ db-codegen --user myuser --password mypassword --url jdbc:postgresql://myhost:8888/postgres --file Tables.scala --type-map "bool,Boolean;int4,Int;int8,Long"
+$ scala-db-codegen --user myuser --password mypassword --url jdbc:postgresql://myhost:8888/postgres --file Tables.scala --type-map "bool,Boolean;int4,Int;int8,Long"
 ...
 ```
 
 For more details:
 ```shell
-$ db-codegen --help
-db-codegen 0.1.0
-Usage: db-codegen [options]
+$ scala-db-codegen --help
+scala-db-codegen 0.2.0
+Usage: scala-db-codegen [options]
   --usage
         Print usage and exit
   --help | -h
@@ -151,6 +151,18 @@ to do exactly what I wanted.
 Instead of learning more about slick models and which methods to override
 on the slick code generator, I decided to roll my own code generator and
 hopefully learn more about jdbc along the way :)
+
+## Changelog
+
+**0.2.0**
+
+* Map nullable columns to `Option` types.
+* Rename maven artifact name to `scala-db-codegen` for consistency.
+
+**0.1.0**
+
+* Basic code generation
+* Command line interface
 
 [travisImg]: https://travis-ci.org/olafurpg/scala-db-codegen.svg?branch=master
 [travisLink]: https://travis-ci.org/olafurpg/scala-db-codegen
