@@ -117,7 +117,7 @@ Usage: scala-db-codegen [options]
 
 ```scala
 // 2.11 only
-libraryDependencies += "com.geirsson" %% "codegen" % "<version>"
+libraryDependencies += "com.geirsson" %% "scala-db-codegen" % "<version>"
 ```
 
 Consult the source code, at least for now ;)
