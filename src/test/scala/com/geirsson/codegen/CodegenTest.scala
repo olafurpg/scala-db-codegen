@@ -53,6 +53,7 @@ class CodegenTest extends FunSuite {
           |
           |create table article(
           |  id integer not null,
+          |  article_unique_id uuid,
           |  author_id integer,
           |  is_published boolean
           |);
