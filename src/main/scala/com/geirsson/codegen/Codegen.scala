@@ -19,7 +19,7 @@ import org.scalafmt.ScalafmtStyle
 case class Error(msg: String) extends Exception(msg)
 
 @AppName("db-codegen")
-@AppVersion("0.1.0")
+@AppVersion(Versions.nightly)
 @ProgName("db-codegen")
 case class CodegenOptions(
     @HelpMessage("user on database server") user: String = "postgres",

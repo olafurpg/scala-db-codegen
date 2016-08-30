@@ -84,7 +84,6 @@ $ scala-db-codegen --user myuser --password mypassword --url jdbc:postgresql://m
 For more details:
 ```shell
 $ scala-db-codegen --help
-scala-db-codegen 0.2.0
 Usage: scala-db-codegen [options]
   --usage
         Print usage and exit
