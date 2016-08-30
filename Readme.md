@@ -153,12 +153,16 @@ hopefully learn more about jdbc along the way :)
 
 ## Changelog
 
-**0.2.0**
+### 0.2.1
+
+* No longer abort on missing key in `--type-map`, see #3. Thanks @nightscape!
+
+### 0.2.0
 
 * Map nullable columns to `Option` types.
 * Rename maven artifact name to `scala-db-codegen` for consistency.
 
-**0.1.0**
+### 0.1.0
 
 * Basic code generation
 * Command line interface
