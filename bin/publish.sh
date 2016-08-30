@@ -64,7 +64,7 @@ function update-github-release() {
         --repo $repo \
         --tag ${tag} \
         --name "${tag}" \
-        --description "Changelog is here: $project_url"
+        --description "Changelog is here: ${project_url}#changelog"
 
     echo "Uploading tar..."
     github-release upload \
