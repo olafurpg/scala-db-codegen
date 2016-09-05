@@ -72,11 +72,11 @@ Download 13kb bootstrap script
 and execute it.
 The script will download all dependencies on first execution.
 
-```scala
-// print to stdout, works with running postgres instance on
-// localhost:5432 with user "postgres", password "postgres" and database "postgres"
+```bash
+# print to stdout, works with running postgres instance on
+# localhost:5432 with user "postgres", password "postgres" and database "postgres"
 $ scala-db-codegen
-// Override any default settings with flags.
+# Override any default settings with flags.
 $ scala-db-codegen --user myuser --password mypassword --url jdbc:postgresql://myhost:8888/postgres --file Tables.scala --type-map "bool,Boolean;int4,Int;int8,Long"
 ...
 ```
