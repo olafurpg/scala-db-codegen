@@ -261,7 +261,17 @@ object Codegen extends AppOf[CodegenOptions] {
                                   codegenOptions.user,
                                   codegenOptions.password)
     val codegen = Codegen(codegenOptions, SnakeCaseReverse)
-    val foreignKeys = codegen.getForeignKeys(db)
+    val plainForeignKeys = codegen.getForeignKeys(db)
+
+    val foreignKeys = plainForeignKeys.map { fk =>
+
+      def resolve(col: codegen.SimpleColumn): codegen.SimpleColumn = {
+        plainForeignKeys.find(f => f.from == col).map(_.to).getOrElse(col)
+      }
+
+      codegen.ForeignKey(fk.from, resolve(fk.to))
+    }
+
     val tables = codegen.getTables(db, foreignKeys)
     val generatedCode =
       codegen.tables2code(tables, SnakeCaseReverse, codegenOptions)
