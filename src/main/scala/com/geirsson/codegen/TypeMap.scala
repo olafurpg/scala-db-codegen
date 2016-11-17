@@ -28,7 +28,10 @@ object TypeMap {
     "varchar" -> "String",
     "serial" -> "Int",
     "bigserial" -> "Long",
-    "timestamp" -> "Date"
+    "timestamp" -> "java.util.Date",
+    "bytea" -> "Array[Byte]", // PostgreSQL
+    "uuid" -> "java.util.UUID", // H2, PostgreSQL
+    "json" -> "String" // PostgreSQL
   )
 }
 

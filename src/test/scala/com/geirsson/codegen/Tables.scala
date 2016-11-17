@@ -1,18 +1,28 @@
 package com.geirsson.codegen
-import java.util.Date
 import io.getquill.WrappedValue
 
+//noinspection ScalaStyle
 object Tables {
   /////////////////////////////////////////////////////
   // Article
   /////////////////////////////////////////////////////
-  case class Article(id: Article.Id, authorId: Option[TestUser.Id], isPublished: Option[Article.IsPublished])
+  case class Article(id: Article.Id,
+                     articleUniqueId: Option[Article.ArticleUniqueId],
+                     authorId: Option[TestUser.Id],
+                     isPublished: Option[Article.IsPublished])
   object Article {
-    def create(id: Int, authorId: Option[Int], isPublished: Option[Boolean]): Article = {
-      Article(Id(id), authorId.map(TestUser.Id.apply), isPublished.map(IsPublished.apply))
+    def create(id: Int,
+               articleUniqueId: Option[java.util.UUID],
+               authorId: Option[Int],
+               isPublished: Option[Boolean]): Article = {
+      Article(Id(id),
+              articleUniqueId.map(ArticleUniqueId.apply),
+              authorId.map(TestUser.Id.apply),
+              isPublished.map(IsPublished.apply))
     }
-    case class Id(value: Int)              extends AnyVal with WrappedValue[Int]
-    case class IsPublished(value: Boolean) extends AnyVal with WrappedValue[Boolean]
+    case class Id(value: Int)                         extends AnyVal with WrappedValue[Int]
+    case class ArticleUniqueId(value: java.util.UUID) extends AnyVal with WrappedValue[java.util.UUID]
+    case class IsPublished(value: Boolean)            extends AnyVal with WrappedValue[Boolean]
   }
 
   /////////////////////////////////////////////////////
