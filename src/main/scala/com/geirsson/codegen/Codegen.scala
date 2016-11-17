@@ -23,16 +23,13 @@ case class Error(msg: String) extends Exception(msg)
 @ProgName("db-codegen")
 case class CodegenOptions(
     @HelpMessage("user on database server") user: String = "postgres",
-    @HelpMessage("password for user on database server") password: String =
-      "postgres",
+    @HelpMessage("password for user on database server") password: String = "postgres",
     @HelpMessage("jdbc url") url: String = "jdbc:postgresql:postgres",
     @HelpMessage("schema on database") schema: String = "public",
-    @HelpMessage("only tested with postgresql") jdbcDriver: String =
-      "org.postgresql.Driver",
+    @HelpMessage("only tested with postgresql") jdbcDriver: String = "org.postgresql.Driver",
     @HelpMessage(
       "top level imports of generated file"
-    ) imports: String = """|import java.util.Date
-                           |import io.getquill.WrappedValue""".stripMargin,
+    ) imports: String = """import io.getquill.WrappedValue""",
     @HelpMessage(
       "package name for generated classes"
     ) `package`: String = "tables",
@@ -91,7 +88,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
         val columns = getColumns(db, name, foreignKeys)
         val mappedColumns = columns.filter(_.isRight).map(_.right.get)
         val unmappedColumns = columns.filter(_.isLeft).map(_.left.get)
-        if (!unmappedColumns.isEmpty)
+        if (unmappedColumns.nonEmpty)
           warn(s"The following columns from table $name need a mapping: $unmappedColumns")
         Some(Table(
           name,
@@ -143,6 +140,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
     s"""|package ${options.`package`}
         |${options.imports}
         |
+        |//noinspection ScalaStyle
         |object Tables {
         |$body
         |}
