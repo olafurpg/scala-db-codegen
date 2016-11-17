@@ -16,6 +16,17 @@ object Tables {
   }
 
   /////////////////////////////////////////////////////
+  // ArticleActive
+  /////////////////////////////////////////////////////
+  case class ArticleActive(articleId: Article.Id, active: Option[ArticleActive.Active])
+  object ArticleActive {
+    def create(articleId: Int, active: Option[Boolean]): ArticleActive = {
+      ArticleActive(Article.Id(articleId), active.map(Active.apply))
+    }
+    case class Active(value: Boolean) extends AnyVal with WrappedValue[Boolean]
+  }
+
+  /////////////////////////////////////////////////////
   // TestUser
   /////////////////////////////////////////////////////
   case class TestUser(id: TestUser.Id, name: Option[TestUser.Name])

@@ -52,7 +52,7 @@ class CodegenTest extends FunSuite {
           |);
           |
           |create table article(
-          |  id integer not null,
+          |  id integer unique not null,
           |  article_unique_id uuid,
           |  author_id integer,
           |  is_published boolean
@@ -62,6 +62,18 @@ class CodegenTest extends FunSuite {
           |  ADD CONSTRAINT author_id_fk
           |  FOREIGN KEY (author_id)
           |  REFERENCES test_user (id);
+          |
+          |create table article_active(
+          |  article_id integer unique not null,
+          |  active boolean
+          |);
+          |
+          |ALTER TABLE article_active
+          |  ADD CONSTRAINT article_id_fk
+          |  FOREIGN KEY (article_id)
+          |  REFERENCES article (id);
+          |
+          |COMMENT ON TABLE article_active IS 'This is to demonstrate a foreign primary key.';
       """.stripMargin
     stmt.executeUpdate(sql)
     conn.close()
