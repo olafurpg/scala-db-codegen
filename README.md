@@ -1,5 +1,5 @@
 # scala-db-codegen [![Build Status][travisImg]](travisLink) [![Maven][mavenImg]][mavenLink]
-Generate Scala code from your database to use with the incredble library [quill](https://github.com/getquill/quill).
+Generate Scala code from your database to use with the incredible library [quill](https://github.com/getquill/quill).
 Only tested with postgresql, but could in theory work with any jdbc compliant database.
 
 
