@@ -28,7 +28,7 @@ object TypeMap {
     "varchar" -> "String",
     "serial" -> "Int",
     "bigserial" -> "Long",
-    "timestamp" -> "java.util.Date",
+    "timestamp" -> "java.time.LocalDateTime", // Since Quill 1.0.1, the scalajs-java-time library supports java time.
     "bytea" -> "Array[Byte]", // PostgreSQL
     "uuid" -> "java.util.UUID", // H2, PostgreSQL
     "json" -> "String" // PostgreSQL
