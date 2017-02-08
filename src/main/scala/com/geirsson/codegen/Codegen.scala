@@ -29,7 +29,7 @@ case class CodegenOptions(
     @HelpMessage("only tested with postgresql") jdbcDriver: String = "org.postgresql.Driver",
     @HelpMessage(
       "top level imports of generated file"
-    ) imports: String = """import io.getquill.WrappedValue""",
+    ) imports: String = """""",
     @HelpMessage(
       "package name for generated classes"
     ) `package`: String = "tables",
@@ -140,8 +140,31 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
     s"""|package ${options.`package`}
         |${options.imports}
         |
+        |/**
+        | * Generated using [[https://github.com/olafurpg/scala-db-codegen scala-db-codegen]]
+        | *  - Number of tables: ${tables.size}
+        | *  - Database URL: ${options.url}
+        | *  - Database schema: ${options.schema}
+        | *  - Database user: ${options.user}
+        | */
         |//noinspection ScalaStyle
         |object Tables {
+        |
+        |  /**
+        |    * Quill used to have this trait before v1, but it's still useful to keep.
+        |    * Examples are: pattern matching on wrapped type and conversion to JSON objects.
+        |    */
+        |  trait WrappedValue[T] extends Any with WrappedType { self: AnyVal =>
+        |    type Type = T
+        |    def value: T
+        |    override def toString = s"$$value"
+        |  }
+        |
+        |  trait WrappedType extends Any {
+        |    type Type
+        |    def value: Type
+        |  }
+        |
         |$body
         |}
      """.stripMargin

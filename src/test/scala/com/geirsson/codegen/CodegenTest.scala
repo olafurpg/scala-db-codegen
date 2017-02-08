@@ -55,7 +55,8 @@ class CodegenTest extends FunSuite {
           |  id integer unique not null,
           |  article_unique_id uuid,
           |  author_id integer,
-          |  is_published boolean
+          |  is_published boolean,
+          |  published_at timestamp
           |);
           |
           |ALTER TABLE article
