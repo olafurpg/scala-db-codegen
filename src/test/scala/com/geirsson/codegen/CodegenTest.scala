@@ -8,10 +8,10 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.sql.DriverManager
 
-import caseapp.CaseApp
+import caseapp.{CaseApp, RemainingArgs}
 import org.scalatest.FunSuite
 
-class CodegenTest extends FunSuite {
+class sbtCodegenTest extends FunSuite {
 
   def structure(code: String): String = {
     import scala.meta._
@@ -100,7 +100,7 @@ class CodegenTest extends FunSuite {
     )
     val baos = new ByteArrayOutputStream()
     val ps = new PrintStream(baos)
-    Codegen.run(options, ps)
+    Codegen.run(options, RemainingArgs(Seq(), Seq()))
     val obtained = new String(baos.toByteArray, StandardCharsets.UTF_8)
     println(obtained)
     assert(structure(expected) == structure(obtained))

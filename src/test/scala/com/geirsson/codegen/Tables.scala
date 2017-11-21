@@ -1,5 +1,4 @@
 package com.geirsson.codegen
-import io.getquill.WrappedValue
 
 //noinspection ScalaStyle
 object Tables {
@@ -20,9 +19,9 @@ object Tables {
               authorId.map(TestUser.Id.apply),
               isPublished.map(IsPublished.apply))
     }
-    case class Id(value: Int)                         extends AnyVal with WrappedValue[Int]
-    case class ArticleUniqueId(value: java.util.UUID) extends AnyVal with WrappedValue[java.util.UUID]
-    case class IsPublished(value: Boolean)            extends AnyVal with WrappedValue[Boolean]
+    case class Id(value: Int)                         extends AnyVal
+    case class ArticleUniqueId(value: java.util.UUID) extends AnyVal
+    case class IsPublished(value: Boolean)            extends AnyVal
   }
 
   /////////////////////////////////////////////////////
@@ -33,7 +32,7 @@ object Tables {
     def create(articleId: Int, active: Option[Boolean]): ArticleActive = {
       ArticleActive(Article.Id(articleId), active.map(Active.apply))
     }
-    case class Active(value: Boolean) extends AnyVal with WrappedValue[Boolean]
+    case class Active(value: Boolean) extends AnyVal
   }
 
   /////////////////////////////////////////////////////
@@ -44,7 +43,7 @@ object Tables {
     def create(id: Int, name: Option[String]): TestUser = {
       TestUser(Id(id), name.map(Name.apply))
     }
-    case class Id(value: Int)      extends AnyVal with WrappedValue[Int]
-    case class Name(value: String) extends AnyVal with WrappedValue[String]
+    case class Id(value: Int)      extends AnyVal
+    case class Name(value: String) extends AnyVal
   }
 }

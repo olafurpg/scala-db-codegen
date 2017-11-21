@@ -181,7 +181,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
     def toSimple = references.getOrElse(SimpleColumn(tableName, columnName))
 
     def toClass: String = {
-      s"case class ${namingStrategy.table(columnName)}(value: $scalaType) extends AnyVal with WrappedValue[$scalaType]"
+      s"case class ${namingStrategy.table(columnName)}(value: $scalaType) extends AnyVal"
     }
   }
 
