@@ -31,22 +31,25 @@ lazy val publishSettings = Seq(
       </developers>
 )
 
-lazy val `launaskil-codegen` =
+enablePlugins(PackPlugin)
+import xerial.sbt.pack.PackPlugin.packSettings
+
+lazy val `scala-db-codegen` =
   (project in file("."))
     .settings(packSettings)
     .settings(publishSettings)
     .settings(
       name := "scala-db-codegen",
       organization := "com.geirsson",
-      scalaVersion := "2.11.8",
+      scalaVersion := "2.12.4",
       version := com.geirsson.codegen.Versions.nightly,
       packMain := Map("scala-db-codegen" -> "com.geirsson.codegen.Codegen"),
       libraryDependencies ++= Seq(
-        "com.geirsson" %% "scalafmt-core" % "0.3.0",
-        "io.getquill" %% "quill-core" % "0.8.0",
-        "com.h2database" % "h2" % "1.4.192",
-        "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
-        "com.github.alexarchambault" %% "case-app" % "1.0.0-RC3",
-        "org.scalatest" %% "scalatest" % "3.0.0" % "test"
+        "com.geirsson" %% "scalafmt-core" % "1.2.0",
+        "io.getquill" %% "quill-core" % "2.2.0",
+        "com.h2database" % "h2" % "1.4.196",
+        "org.postgresql" % "postgresql" % "42.1.4",
+        "com.github.alexarchambault" %% "case-app" % "1.2.0",
+        "org.scalatest" %% "scalatest" % "3.0.4" % "test"
       )
     )
