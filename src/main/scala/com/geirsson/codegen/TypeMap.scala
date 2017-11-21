@@ -6,7 +6,7 @@ import caseapp.core.ArgParser
 
 object TypeMap {
   implicit val parser: ArgParser[TypeMap] =
-    ArgParser.instance[TypeMap] { s =>
+    ArgParser.instance[TypeMap] ("Type map") { s =>
       try {
         val pairs = s.split(";").map { pair =>
           val from :: to :: Nil = pair.split(",", 2).toList

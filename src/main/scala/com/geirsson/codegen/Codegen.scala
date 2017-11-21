@@ -12,9 +12,8 @@ import caseapp.AppOf
 import caseapp._
 import com.typesafe.scalalogging.Logger
 import io.getquill.NamingStrategy
-import org.scalafmt.FormatResult
-import org.scalafmt.Scalafmt
-import org.scalafmt.ScalafmtStyle
+import org.scalafmt.{Formatted, Scalafmt}
+import org.scalafmt.config.ScalafmtConfig
 
 case class Error(msg: String) extends Exception(msg)
 
@@ -42,9 +41,7 @@ case class CodegenOptions(
     @HelpMessage(
       "Write generated code to this filename. Prints to stdout if not set."
     ) file: Option[String] = None
-) extends App {
-  Codegen.cliRun(this)
-}
+) { }
 
 case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
   import Codegen._
@@ -59,19 +56,25 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
   }
 
   def getForeignKeys(db: Connection): Set[ForeignKey] = {
-    val foreignKeys =
-      db.getMetaData.getExportedKeys(null, options.schema, null)
-    results(foreignKeys).map { row =>
-      ForeignKey(
-        from = SimpleColumn(
-          tableName = row.getString(FK_TABLE_NAME),
-          columnName = row.getString(FK_COLUMN_NAME)
-        ),
-        to = SimpleColumn(
-          tableName = row.getString(PK_TABLE_NAME),
-          columnName = row.getString(PK_COLUMN_NAME)
+    val allTables =
+      results(db.getMetaData.getTables(null, options.schema, "%", Array("TABLE"))).map { row =>
+        row.getString(TABLE_NAME)
+      }
+
+    allTables.flatMap { table =>
+      val foreignKeys = db.getMetaData.getExportedKeys(null, options.schema, table)
+      results(foreignKeys).map { row =>
+        ForeignKey(
+          from = SimpleColumn(
+            tableName = row.getString(FK_TABLE_NAME),
+            columnName = row.getString(FK_COLUMN_NAME)
+          ),
+          to = SimpleColumn(
+            tableName = row.getString(PK_TABLE_NAME),
+            columnName = row.getString(PK_COLUMN_NAME)
+          )
         )
-      )
+      }
     }.toSet
   }
 
@@ -218,7 +221,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
   }
 }
 
-object Codegen extends AppOf[CodegenOptions] {
+object Codegen extends CaseApp[CodegenOptions] {
   val TABLE_NAME = "TABLE_NAME"
   val COLUMN_NAME = "COLUMN_NAME"
   val TYPE_NAME = "TYPE_NAME"
@@ -235,25 +238,21 @@ object Codegen extends AppOf[CodegenOptions] {
     }
   }
 
-  def cliRun(codegenOptions: CodegenOptions,
-             outstream: PrintStream = System.out): Unit = {
-    try {
-      run(codegenOptions, outstream)
-    } catch {
-      case Error(msg) =>
-        System.err.println(msg)
-        System.exit(1)
-    }
-  }
-
   def run(codegenOptions: CodegenOptions,
-          outstream: PrintStream = System.out): Unit = {
+          remainingArgs: RemainingArgs): Unit = {
+    val outstream = System.out
+
+    if (remainingArgs.args.size != 0) {
+      outstream.println("Invalid options specified")
+      CaseApp.printUsage()
+    }
+
     codegenOptions.file.foreach { x =>
       outstream.println("Starting...")
     }
 
     val startTime = System.currentTimeMillis()
-    Class.forName(codegenOptions.jdbcDriver)
+    Class.forName(codegenOptions.jdbcDriver).newInstance()
     val db: Connection =
       DriverManager.getConnection(codegenOptions.url,
                                   codegenOptions.user,
@@ -273,9 +272,9 @@ object Codegen extends AppOf[CodegenOptions] {
     val tables = codegen.getTables(db, foreignKeys)
     val generatedCode =
       codegen.tables2code(tables, SnakeCaseReverse, codegenOptions)
-    val codeStyle = ScalafmtStyle.defaultWithAlign.copy(maxColumn = 120)
+    val codeStyle = ScalafmtConfig.defaultWithAlign.copy(maxColumn = 120)
     val code = Scalafmt.format(generatedCode, style = codeStyle) match {
-      case FormatResult.Success(x) => x
+      case Formatted.Success(x) => x
       case _ => generatedCode
     }
     codegenOptions.file match {
