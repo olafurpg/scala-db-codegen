@@ -30,7 +30,7 @@ case class CodegenOptions(
     @HelpMessage("only tested with postgresql") jdbcDriver: String = "org.postgresql.Driver",
     @HelpMessage(
       "top level imports of generated file"
-    ) imports: String = """import io.getquill.WrappedValue""",
+    ) imports: String = "",
     @HelpMessage(
       "package name for generated classes"
     ) `package`: String = "tables",
@@ -196,7 +196,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
       else typ
     }
 
-    def toType: String = this.toSimple.toType
+    def toType: String = this.scalaType
 
     def toArg(namingStrategy: NamingStrategy, tableName: String): String = {
       s"${namingStrategy.column(columnName)}: ${makeOption(this.toType)}"
@@ -222,11 +222,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
         } else {
           namingStrategy.table(column.columnName)
         }
-        if (column.nullable) {
-          s"${namingStrategy.column(column.columnName)}.map($typName.apply)"
-        } else {
-          s"$typName(${namingStrategy.column(column.columnName)})"
-        }
+        s"${namingStrategy.column(column.columnName)}"
       }.mkString(", ")
       val classes =
         columns.withFilter(_.references.isEmpty).map(_.toClass).mkString("\n")
@@ -239,7 +235,6 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
           |  def create($applyArgs): $scalaName = {
           |    $scalaName($applyArgNames)
           |  }
-          |$classes
           |}""".stripMargin
     }
   }

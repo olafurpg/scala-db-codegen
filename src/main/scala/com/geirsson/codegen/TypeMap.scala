@@ -20,15 +20,22 @@ object TypeMap {
     }
   val default = TypeMap(
     "text" -> "String",
+    "longtext" -> "String",
     "float8" -> "Double",
+    "datetime" -> "java.time.LocalDateTime",
+    "date" -> "java.time.LocalDate",
+    "decimal" -> "BigDecimal",
     "numeric" -> "BigDecimal",
+    "tinyint" -> "Byte",
+    "int" -> "Int",
     "int4" -> "Int",
     "int8" -> "Long",
     "bool" -> "Boolean",
+    "bit" -> "Boolean",
     "varchar" -> "String",
     "serial" -> "Int",
     "bigserial" -> "Long",
-    "timestamp" -> "java.util.Date",
+    "timestamp" -> "java.time.OffsetDateTime",
     "bytea" -> "Array[Byte]", // PostgreSQL
     "uuid" -> "java.util.UUID", // H2, PostgreSQL
     "json" -> "String" // PostgreSQL
