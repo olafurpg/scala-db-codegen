@@ -1,0 +1,25 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'org.scala-lang:scala-library:' + scalaVersionMinor
+    }
+}
+apply plugin: 'scala'
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile 'org.scala-lang:scala-library:' + scalaVersionMinor
+    compile "com.geirsson:scalafmt-core_${scalaVersionMajor}:0.3.0"
+    compile "io.getquill:quill-core_${scalaVersionMajor}:0.8.0"
+    compile "com.h2database:h2:1.4.192"
+    compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.41'
+    compile group: 'org.postgresql', name: 'postgresql', version: '42.2.4'
+    compile "com.github.alexarchambault:case-app_${scalaVersionMajor}:1.0.0-RC3"
+    testCompile "org.scalatest:scalatest_${scalaVersionMajor}:3.0.4"
+
+}

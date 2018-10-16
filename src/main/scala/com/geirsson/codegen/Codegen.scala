@@ -10,6 +10,7 @@ import java.sql.ResultSet
 
 import caseapp.AppOf
 import caseapp._
+import com.geirsson.codegen.Codegen.TABLE_NAME
 import com.typesafe.scalalogging.Logger
 import io.getquill.NamingStrategy
 import org.scalafmt.FormatResult
@@ -29,7 +30,7 @@ case class CodegenOptions(
     @HelpMessage("only tested with postgresql") jdbcDriver: String = "org.postgresql.Driver",
     @HelpMessage(
       "top level imports of generated file"
-    ) imports: String = """import io.getquill.WrappedValue""",
+    ) imports: String = "",
     @HelpMessage(
       "package name for generated classes"
     ) `package`: String = "tables",
@@ -58,28 +59,13 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
     }
   }
 
-  def getForeignKeys(db: Connection): Set[ForeignKey] = {
-    val foreignKeys =
-      db.getMetaData.getExportedKeys(null, options.schema, null)
-    results(foreignKeys).map { row =>
-      ForeignKey(
-        from = SimpleColumn(
-          tableName = row.getString(FK_TABLE_NAME),
-          columnName = row.getString(FK_COLUMN_NAME)
-        ),
-        to = SimpleColumn(
-          tableName = row.getString(PK_TABLE_NAME),
-          columnName = row.getString(PK_COLUMN_NAME)
-        )
-      )
-    }.toSet
-  }
-
   def warn(msg: String): Unit = {
     System.err.println(s"[${Console.YELLOW}warn${Console.RESET}] $msg")
   }
 
-  def getTables(db: Connection, foreignKeys: Set[ForeignKey]): Seq[Table] = {
+  def getTables(db: Connection): Seq[Table] = {
+    val foreignKeys: Set[ForeignKey] = getForeignKeys(db)
+
     val rs: ResultSet =
       db.getMetaData.getTables(null, options.schema, "%", Array("TABLE"))
     results(rs).flatMap { row =>
@@ -99,6 +85,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
       }
     }.toVector
   }
+
   def getColumns(db: Connection,
                  tableName: String,
                  foreignKeys: Set[ForeignKey]): Seq[Either[String, Column]] = {
@@ -110,7 +97,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
       val simpleColumn = SimpleColumn(tableName, colName)
       val ref = foreignKeys.find(_.from == simpleColumn).map(_.to)
 
-      val typ = cols.getString(TYPE_NAME)
+      val typ = cols.getString(TYPE_NAME).toLowerCase
       columnType2scalaType.get(typ).map { scalaType =>
         Right(Column(
           tableName,
@@ -122,6 +109,46 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
         ))
       }.getOrElse(Left(typ))
     }.toVector
+  }
+
+  private def getForeignKeys(db: Connection) = {
+    val rs: ResultSet =
+      db.getMetaData.getTables(null, options.schema, "%", Array("TABLE"))
+    val foreignKeys = results(rs).flatMap { row =>
+      val name = row.getString(TABLE_NAME)
+      if (!excludedTables.contains(name)) {
+
+        val plainForeignKeys = getTableForeignKeys(db, name)
+        val foreignKeys = plainForeignKeys.map { fk =>
+          def resolve(col: SimpleColumn): SimpleColumn = {
+            plainForeignKeys.find(f => f.from == col).map(_.to).getOrElse(col)
+          }
+
+          ForeignKey(fk.from, resolve(fk.to))
+        }
+        foreignKeys
+      } else {
+        Nil
+      }
+    }.toSet
+    foreignKeys
+  }
+
+  def getTableForeignKeys(db: Connection, tableName: String): Set[ForeignKey] = {
+    val foreignKeys =
+      db.getMetaData.getExportedKeys(null, options.schema, tableName)
+    results(foreignKeys).map { row =>
+      ForeignKey(
+        from = SimpleColumn(
+          tableName = row.getString(FK_TABLE_NAME),
+          columnName = row.getString(FK_COLUMN_NAME)
+        ),
+        to = SimpleColumn(
+          tableName = row.getString(PK_TABLE_NAME),
+          columnName = row.getString(PK_COLUMN_NAME)
+        )
+      )
+    }.toSet
   }
 
   def getPrimaryKeys(db: Connection, tableName: String): Set[String] = {
@@ -169,7 +196,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
       else typ
     }
 
-    def toType: String = this.toSimple.toType
+    def toType: String = this.scalaType
 
     def toArg(namingStrategy: NamingStrategy, tableName: String): String = {
       s"${namingStrategy.column(columnName)}: ${makeOption(this.toType)}"
@@ -195,11 +222,7 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
         } else {
           namingStrategy.table(column.columnName)
         }
-        if (column.nullable) {
-          s"${namingStrategy.column(column.columnName)}.map($typName.apply)"
-        } else {
-          s"$typName(${namingStrategy.column(column.columnName)})"
-        }
+        s"${namingStrategy.column(column.columnName)}"
       }.mkString(", ")
       val classes =
         columns.withFilter(_.references.isEmpty).map(_.toClass).mkString("\n")
@@ -212,7 +235,6 @@ case class Codegen(options: CodegenOptions, namingStrategy: NamingStrategy) {
           |  def create($applyArgs): $scalaName = {
           |    $scalaName($applyArgNames)
           |  }
-          |$classes
           |}""".stripMargin
     }
   }
@@ -259,18 +281,7 @@ object Codegen extends AppOf[CodegenOptions] {
                                   codegenOptions.user,
                                   codegenOptions.password)
     val codegen = Codegen(codegenOptions, SnakeCaseReverse)
-    val plainForeignKeys = codegen.getForeignKeys(db)
-
-    val foreignKeys = plainForeignKeys.map { fk =>
-
-      def resolve(col: codegen.SimpleColumn): codegen.SimpleColumn = {
-        plainForeignKeys.find(f => f.from == col).map(_.to).getOrElse(col)
-      }
-
-      codegen.ForeignKey(fk.from, resolve(fk.to))
-    }
-
-    val tables = codegen.getTables(db, foreignKeys)
+    val tables = codegen.getTables(db)
     val generatedCode =
       codegen.tables2code(tables, SnakeCaseReverse, codegenOptions)
     val codeStyle = ScalafmtStyle.defaultWithAlign.copy(maxColumn = 120)
